@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.note.mapper.CategoryMapper">
+    <select id="selectById" resultType="com.example.note.entity.Category">
+        SELECT * FROM category WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultType="com.example.note.entity.Category">
+        SELECT * FROM category ORDER BY sort ASC, create_time DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO category (name, description, sort)
+        VALUES (#{name}, #{description}, #{sort})
+    </insert>
+
+    <update id="update">
+        UPDATE category
+        SET name = #{name},
+            description = #{description},
+            sort = #{sort}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM category WHERE id = #{id}
+    </delete>
+</mapper>

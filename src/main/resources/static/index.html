@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云笔记平台</title>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+    <!-- 登录前显示 -->
+    <router-view v-if="!currentUser"></router-view>
+
+    <!-- 登录后的布局 -->
+    <el-container v-else class="main-container">
+        <el-header>
+            <Header
+                    :user="currentUser"
+                    @logout="handleLogout">
+            </Header>
+        </el-header>
+
+        <el-container>
+            <el-aside width="200px">
+                <CategoryList
+                        :categories="categories"
+                        @select="handleCategorySelect"
+                        @reload="loadCategories">
+                </CategoryList>
+            </el-aside>
+
+            <el-main>
+                <router-view></router-view>
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+
+<!-- 核心库 -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/vue-router@4/dist/vue-router.global.js"></script>
+<script src="https://unpkg.com/element-plus"></script>
+<script src="https://unpkg.com/@element-plus/icons-vue"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+<!-- 调试信息 -->
+<script>
+    console.log('Vue:', Vue);
+    console.log('VueRouter:', VueRouter);
+    console.log('ElementPlus:', ElementPlus);
+    console.log('axios:', axios);
+</script>
+
+<!-- 在核心库之后，API之前添加 -->
+<script>
+    // 全局引用Element Plus组件
+    const { ElMessage, ElMessageBox } = ElementPlus;
+
+    // 注册所有需要的图标
+    const {
+        View,
+        Star,
+        Plus,
+        Reading,
+        Edit,
+        Delete,
+        List,
+        Folder,
+        Timer,
+        User,
+        ArrowDown,
+        ChatDotRound,
+        Document,
+        Collection,
+        Magic,
+        Brush,
+        Check,
+        Close,
+        CopyDocument,
+        QuestionFilled,
+        Setting
+    } = ElementPlus.icons;
+</script>
+
+<!-- API -->
+<script src="js/api/article.js"></script>
+<script src="js/api/category.js"></script>
+<script src="js/api/comment.js"></script>
+<script src="js/api/user.js"></script>
+<script src="js/api/ai-assistant.js"></script>
+
+<!-- 组件 -->
+<script src="js/components/Header.js"></script>
+<script src="js/components/CategoryList.js"></script>
+<script src="js/components/ArticleList.js"></script>
+<script src="js/components/CommentList.js"></script>
+<script src="js/components/Login.js"></script>
+<script src="js/components/Register.js"></script>
+<script src="js/components/ArticleDetail.js"></script>
+<script src="js/components/ArticleEdit.js"></script>
+<script src="js/components/CategoryManage.js"></script>
+<script src="js/components/AIAssistant.js"></script>
+
+<!-- 主应用 -->
+<script>
+    const { createApp } = Vue;
+    const { createRouter, createWebHistory } = VueRouter;
+
+    // 创建应用
+    const app = createApp({
+        data() {
+            return {
+                currentUser: null,
+                categories: []
+            }
+        },
+
+        created() {
+            console.log('App created');
+            const userStr = localStorage.getItem('user');
+            if (userStr) {
+                this.currentUser = JSON.parse(userStr);
+                console.log('App currentUser:', this.currentUser);
+            }
+            this.loadCategories();
+        },
+
+        mounted() {
+            console.log('App mounted, currentUser:', this.currentUser);
+        },
+
+        methods: {
+            async loadCategories() {
+                try {
+                    const response = await categoryApi.list();
+                    this.categories = response.data.data;
+                } catch (error) {
+                    console.error('加载分类失败:', error);
+                }
+            },
+
+            handleLogout() {
+                console.log('Logout called');
+                this.currentUser = null;
+                localStorage.removeItem('user');
+                this.$router.push('/login');
+            },
+
+            handleCategorySelect(categoryId) {
+                this.$router.push(`/home?category=${categoryId}`);
+            }
+        }
+    });
+
+    // 注册组件
+    app.component('Header', Header);
+    app.component('CategoryList', CategoryList);
+    app.component('ArticleList', ArticleList);
+    app.component('CommentList', CommentList);
+    app.component('Login', Login);
+    app.component('Register', Register);
+    app.component('CategoryManage', CategoryManage);
+    app.component('ArticleDetail', ArticleDetail);
+    app.component('ArticleEdit', ArticleEdit);
+    app.component('AIAssistant', AIAssistant);
+
+    // 创建路由
+    const router = createRouter({
+        history: createWebHistory(),
+        routes: [
+            {
+                path: '/',
+                redirect: '/login'
+            },
+            {
+                path: '/login',
+                component: Login
+            },
+            {
+                path: '/register',
+                component: Register
+            },
+            {
+                path: '/home',
+                component: ArticleList,
+                meta: { requiresAuth: true }
+            },
+            {
+                path: '/article/:id',
+                component: ArticleDetail,
+                meta: { requiresAuth: true }
+            },
+            {
+                path: '/article/create',
+                component: ArticleEdit,
+                meta: { requiresAuth: true }
+            },
+            {
+                path: '/article/edit/:id',
+                component: ArticleEdit,
+                meta: { requiresAuth: true }
+            },
+            {
+                path: '/category/manage',
+                component: CategoryManage,
+                meta: { requiresAuth: true, requiresAdmin: true }
+            }
+        ]
+    });
+
+    // 路由守卫
+    router.beforeEach((to, from, next) => {
+        console.log('Route change:', to.path);
+        const userStr = localStorage.getItem('user');
+        if (to.meta.requiresAuth && !userStr) {
+            next('/login');
+            return;
+        }
+
+        if (to.meta.requiresAdmin) {
+            const user = JSON.parse(userStr || '{}');
+            if (user.role !== 'ADMIN') {
+                ElMessage.error('需要管理员权限');
+                next('/home');
+                return;
+            }
+        }
+
+        next();
+    });
+
+    // 使用插件
+    app.use(ElementPlus);
+    app.use(router);
+
+    // 挂载应用
+    app.mount('#app');
+
+    // 添加错误处理
+    app.config.errorHandler = (err, vm, info) => {
+        console.error('Vue Error:', err);
+        console.error('Error Info:', info);
+    };
+
+    // 注册所有图标组件
+    app.component('View', View);
+    app.component('Star', Star);
+    app.component('Plus', Plus);
+    app.component('Reading', Reading);
+    app.component('Edit', Edit);
+    app.component('Delete', Delete);
+    app.component('List', List);
+    app.component('Folder', Folder);
+    app.component('Timer', Timer);
+    app.component('User', User);
+    app.component('ArrowDown', ArrowDown);
+    app.component('ChatDotRound', ChatDotRound);
+    app.component('Document', Document);
+    app.component('Collection', Collection);
+    app.component('Magic', Magic);
+    app.component('Brush', Brush);
+    app.component('Check', Check);
+    app.component('Close', Close);
+    app.component('CopyDocument', CopyDocument);
+    app.component('QuestionFilled', QuestionFilled);
+    app.component('Setting', Setting);
+</script>
+</body>
+</html> 

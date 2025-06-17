@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.note.mapper.ArticleMapper">
+    <resultMap id="BaseResultMap" type="com.example.note.entity.Article">
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <result column="title" property="title" jdbcType="VARCHAR"/>
+        <result column="content" property="content" jdbcType="VARCHAR"/>
+        <result column="category_id" property="categoryId" jdbcType="BIGINT"/>
+        <result column="author_id" property="authorId" jdbcType="BIGINT"/>
+        <result column="view_count" property="viewCount" jdbcType="INTEGER"/>
+        <result column="like_count" property="likeCount" jdbcType="INTEGER"/>
+        <result column="status" property="status" jdbcType="INTEGER"/>
+    </resultMap>
+    <select id="selectById" resultMap="BaseResultMap">
+        SELECT * FROM article WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultMap="BaseResultMap">
+        SELECT * FROM article
+        <where>
+            <if test="categoryId != null">
+                AND category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="authorId != null">
+                AND author_id = #{authorId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND title LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectByCategoryId" resultMap="BaseResultMap">
+        SELECT * FROM article
+        WHERE category_id = #{categoryId}
+          AND status = 1
+        ORDER BY create_time DESC
+    </select>
+
+    <select id="selectByAuthorId" resultMap="BaseResultMap">
+        SELECT * FROM article
+        WHERE author_id = #{authorId}
+        ORDER BY create_time DESC
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO article (
+            title, content, category_id, author_id,
+            status, view_count, like_count
+        )
+        VALUES (
+                   #{title}, #{content}, #{categoryId}, #{authorId},
+                   #{status}, 0, 0
+               )
+    </insert>
+
+    <update id="update">
+        UPDATE article
+        SET title = #{title},
+            content = #{content},
+            category_id = #{categoryId},
+            status = #{status},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateViewCount">
+        UPDATE article
+        SET view_count = view_count + 1
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateLikeCount">
+        UPDATE article
+        SET like_count = like_count + 1
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM article WHERE id = #{id}
+    </delete>
+</mapper>
